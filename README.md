@@ -1,2 +1,3 @@
 # 1DInverseScatteringGLM
-Code accompanying the paper *One Dimensional Inverse Scattering: Stability and Regularization* by A. Tataris and T. van Leeuwen
+Code accompanying the paper *A Regularised Total Least Squares approach for 1D inverse
+scattering* by A. Tataris and T. van Leeuwen
