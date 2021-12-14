@@ -139,7 +139,7 @@ def getScatteringData2(rho,T,L,h,x0,t0,f0):
     
     return x,t,r,u,u0
 
-def Solve_GLM_LS(r,t,alpha=1e-16):
+def Solve_GLM_LS(r,t,alpha=1e-16,maxit=10):
     """
     Solve the GLM equation: 
         
@@ -155,7 +155,6 @@ def Solve_GLM_LS(r,t,alpha=1e-16):
         r - scattering data (1d array)
         t - temporal grid at which r is given (1d array)
         alpha - regularization parameter (float), default=1e-16
-        method - {'tsvd','lsqr'}, default='lsqr'
     
     output:
         B - solution (2d array)
@@ -180,7 +179,7 @@ def Solve_GLM_LS(r,t,alpha=1e-16):
         I = np.identity(mt)
         R = la.hankel(r[j:j+mt],r[j+mt-1:j+2*mt-1])
         A = I + dt*R
-        B[:,j] = lsqr(np.concatenate((A,np.sqrt(alpha)*L)),np.concatenate((-r[j:j+mt],np.zeros(mt))))[0]
+        B[:,j] = lsqr(np.concatenate((A,np.sqrt(alpha)*L)),np.concatenate((-r[j:j+mt],np.zeros(mt))),iter_lim=maxit)[0]
         phi += np.linalg.norm(B[:,j] + dt*R@B[:,j] + r[j:j+mt])**2 + alpha*np.linalg.norm(L@B[:,j])**2
     return B,t[:mt],phi
 
@@ -221,7 +220,7 @@ def Solve_GLM_TLS(r,t,alpha=[1e-16,1e-3],maxit=(10,10)):
     # main loop
     for it in range(maxit[1]):
         # estimate kernel
-        B,ts,phi= Solve_GLM_LS(r + e,t,alpha[0])
+        B,ts,phi= Solve_GLM_LS(r + e,t,alpha[0],maxit[0])
         
         # estimate error
         
