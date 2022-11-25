@@ -7,7 +7,7 @@ import scipy.sparse as sps
 from scipy import interpolate
 from scipy.sparse.linalg import lsqr
 from scipy import fft,ifft
-from scipy.optimize import minimize_scalar, minimize
+from scipy.optimize import minimize_scalar, minimize, root_scalar
 
 #The following wave solver is used in Example 1 (PLASMA WAVE EQUATION)
 def SolveWE(q,f,T,L,h):
@@ -271,6 +271,42 @@ def get_parameters(r_delta,B0,t,ts,t0,x0):
     
     result_TLS = minimize_scalar(Jerror_TLS, bounds=(1e-16,1e2), method='bounded')
     alpha_TLS = result_TLS.x
+    
+    return alpha_LS, alpha_TLS
+
+def get_parameters2(r_delta,t,sigma,eta):
+    """
+    Get regularisation parameters by the discrepancy principle
+    """
+    
+    def residual(B,r,t):
+        nt = len(t)
+        dt = t[2]-t[1]
+        mt = int(nt/3)
+        res = 0
+        for j in range(mt):
+            # generate operator (Hankel matrix)
+            I = np.identity(mt)
+            R = la.hankel(r[j:j+mt],r[j+mt-1:j+2*mt-1])
+            A = I + dt*R
+            res += np.linalg.norm(B[:,j] + dt*R@B[:,j] + r[j:j+mt])**2
+        return res
+
+    def residual_LS(alpha,r_delta,t): 
+        B_hat,ts,phi = Solve_GLM_LS(r_delta,t,alpha=alpha)
+
+        return residual(B_hat,r_delta,t)
+
+    def residual_TLS(alpha,r_delta,t): 
+        B_hat,e_hat,ts,hist = Solve_GLM_TLS(r_delta,t,alpha=[alpha,1e-16])
+
+        return residual(B_hat,r_delta+e_hat,t)
+    
+    result = root_scalar(lambda alpha : residual_LS(alpha,r_delta,t) - eta*sigma, bracket = [1e-6,1])
+    alpha_LS = result.root
+
+    result = root_scalar(lambda alpha : residual_TLS(alpha,r_delta,t) - eta*sigma, bracket = [1e-6,1])
+    alpha_TLS = result.root
     
     return alpha_LS, alpha_TLS
     
